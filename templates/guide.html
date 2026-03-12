@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Guide - Pre-Market Briefing</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Guide-specific styles */
+        .guide-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 240px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 20px 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .guide-nav .nav-title {
+            font-size: 14px;
+            font-weight: 700;
+            padding: 0 20px 16px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+
+        .guide-nav .nav-title a {
+            color: var(--blue);
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 400;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .guide-nav .nav-title a:hover {
+            text-decoration: underline;
+        }
+
+        .guide-nav .nav-group {
+            padding: 8px 0;
+        }
+
+        .guide-nav .nav-group-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            padding: 8px 20px 4px;
+        }
+
+        .guide-nav a {
+            display: block;
+            padding: 6px 20px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 13px;
+            border-left: 3px solid transparent;
+            transition: all 0.15s ease;
+        }
+
+        .guide-nav a:hover,
+        .guide-nav a.active {
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border-left-color: var(--blue);
+        }
+
+        .guide-body {
+            margin-left: 240px;
+            padding: 32px 48px;
+            max-width: 900px;
+        }
+
+        .guide-body h1 {
+            font-size: 28px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .guide-body .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin-bottom: 40px;
+        }
+
+        .guide-body h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 48px;
+            margin-bottom: 16px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .guide-body h2:first-of-type {
+            margin-top: 0;
+            border-top: none;
+            padding-top: 0;
+        }
+
+        .guide-body h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 28px;
+            margin-bottom: 10px;
+            color: var(--text-primary);
+        }
+
+        .guide-body p {
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.7;
+        }
+
+        .guide-body strong {
+            color: var(--text-primary);
+        }
+
+        /* Section preview mock */
+        .section-preview {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 16px 0 24px;
+            position: relative;
+        }
+
+        .section-preview .preview-label {
+            position: absolute;
+            top: -10px;
+            left: 16px;
+            background: var(--bg-primary);
+            padding: 0 8px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--blue);
+        }
+
+        /* Term definition */
+        .term {
+            display: flex;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .term:last-child {
+            border-bottom: none;
+        }
+
+        .term-name {
+            min-width: 160px;
+            font-weight: 700;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+
+        .term-def {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Color labels inline */
+        .c-green { color: var(--green); font-weight: 600; }
+        .c-red { color: var(--red); font-weight: 600; }
+        .c-yellow { color: var(--yellow); font-weight: 600; }
+        .c-orange { color: var(--orange); font-weight: 600; }
+        .c-blue { color: var(--blue); font-weight: 600; }
+        .c-purple { color: var(--purple); font-weight: 600; }
+        .c-muted { color: var(--text-muted); }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 32px;
+            margin: 16px 0 24px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--border);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 28px;
+        }
+
+        .timeline-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: -32px;
+            top: 2px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            z-index: 1;
+        }
+
+        .timeline-dot.primary {
+            border-color: var(--blue);
+            background: rgba(88, 166, 255, 0.15);
+        }
+
+        .timeline-dot.action {
+            border-color: var(--green);
+            background: rgba(63, 185, 80, 0.15);
+        }
+
+        .timeline-dot.warn {
+            border-color: var(--orange);
+            background: rgba(219, 109, 40, 0.15);
+        }
+
+        .timeline-time {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .timeline-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--blue);
+            margin-bottom: 4px;
+        }
+
+        .timeline-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .timeline-checklist {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0 0;
+        }
+
+        .timeline-checklist li {
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 3px 0;
+        }
+
+        .timeline-checklist li::before {
+            content: '\2610 ';
+            color: var(--text-muted);
+            margin-right: 4px;
+        }
+
+        /* Example boxes */
+        .example-box {
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin: 12px 0 20px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .example-box.tip {
+            background: rgba(63, 185, 80, 0.08);
+            border: 1px solid var(--green-dim);
+        }
+
+        .example-box.warn {
+            background: rgba(219, 109, 40, 0.08);
+            border: 1px solid var(--orange);
+        }
+
+        .example-box.info {
+            background: rgba(88, 166, 255, 0.08);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+        }
+
+        .example-box .box-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .example-box.tip .box-title { color: var(--green); }
+        .example-box.warn .box-title { color: var(--orange); }
+        .example-box.info .box-title { color: var(--blue); }
+
+        /* Badge samples */
+        .badge-sample {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+            margin: 0 4px;
+        }
+
+        .badge-green { background: var(--green-dim); color: var(--green); }
+        .badge-red { background: var(--red-dim); color: var(--red); }
+        .badge-muted { background: rgba(139, 148, 158, 0.2); color: var(--text-muted); }
+        .badge-orange { background: rgba(219, 109, 40, 0.2); color: var(--orange); }
+
+        /* Interactive section highlight on scroll */
+        .guide-section {
+            scroll-margin-top: 20px;
+        }
+
+        /* Collapsible sections */
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsible::after {
+            content: ' +';
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .collapsible.open::after {
+            content: ' -';
+        }
+
+        .collapsible-content {
+            display: none;
+            padding-top: 8px;
+        }
+
+        .collapsible-content.open {
+            display: block;
+        }
+
+        /* Mobile */
+        @media (max-width: 768px) {
+            .guide-nav { display: none; }
+            .guide-body { margin-left: 0; padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Side navigation -->
+    <nav class="guide-nav" id="guide-nav">
+        <div class="nav-title">
+            Dashboard Guide
+            <a href="/">&#8592; Back to Dashboard</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Sections</div>
+            <a href="#header">Header & Timestamp</a>
+            <a href="#prev-predictions">Previous Predictions</a>
+            <a href="#macro-warning">Macro Event Warning</a>
+            <a href="#prediction-cards">Prediction Cards</a>
+            <a href="#market-context">Market Context</a>
+            <a href="#options-gex">Options & GEX</a>
+            <a href="#scorecard">Scorecard</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">Key Terms</div>
+            <a href="#term-confidence">Confidence & NO EDGE</a>
+            <a href="#term-ibs">IBS (Internal Bar Strength)</a>
+            <a href="#term-vix">VIX</a>
+            <a href="#term-gamma">Gamma Exposure</a>
+            <a href="#term-walls">Put Wall / Call Wall</a>
+            <a href="#term-maxpain">Max Pain</a>
+            <a href="#term-gexflip">GEX Flip</a>
+        </div>
+
+        <div class="nav-group">
+            <div class="nav-group-label">How to Use</div>
+            <a href="#daily-sequence">Daily Sequence</a>
+            <a href="#reading-signals">Reading Signals</a>
+            <a href="#when-to-ignore">When to Ignore</a>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="guide-body">
+        <h1>Pre-Market Briefing Guide</h1>
+        <p class="subtitle">How to read each section, what the terms mean, and when to use the dashboard throughout the trading day.</p>
+
+        <!-- ==================== SECTIONS ==================== -->
+
+        <h2 id="header" class="guide-section">Header & Timestamp</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:20px; font-weight:700;">Pre-Market Briefing</span>
+                <span style="color:var(--text-secondary);">Thursday 2026-03-12 &nbsp; <span class="badge-sample badge-muted">Refresh</span></span>
+            </div>
+            <div style="margin-top:12px;">
+                <span class="badge-sample badge-green">Computed: 2026-03-12 07:45:12 ET</span>
+            </div>
+        </div>
+        <p>The <strong>green timestamp</strong> shows exactly when the data was generated. If it's stale (e.g., from hours ago), hit <strong>Refresh</strong> to re-fetch everything from IBKR and re-run predictions.</p>
+        <p>Refreshing triggers: a new IBKR connection, model training check, pre-market data fetch, options chain fetch, and scorecard update. First load of the day takes ~60-90 seconds; subsequent refreshes are faster since models are cached.</p>
+
+
+        <h2 id="prev-predictions" class="guide-section">Previous Predictions</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="font-size:12px; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">PREVIOUS PREDICTIONS -- 2026-03-12</div>
+            <div style="margin-top:6px; font-size:13px;">
+                30M <span class="c-red">BEAR 62%</span> &nbsp;&nbsp;
+                MORN <span class="c-green">BULL 71%</span> &nbsp;&nbsp;
+                DAY <span class="c-green">BULL 68%</span>
+            </div>
+        </div>
+        <p>Shows predictions from your <em>last</em> page load for today. Useful to see if predictions shift as more pre-market data comes in. If you loaded at 5 AM and reload at 8 AM, this shows your 5 AM predictions so you can compare.</p>
+        <p>Once actuals are available (after market close), this will also show how the prediction compared to the real outcome.</p>
+
+
+        <h2 id="macro-warning" class="guide-section">Macro Event Warning</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="background:rgba(219,109,40,0.15); border:1px solid var(--orange); border-radius:6px; padding:10px 16px; color:var(--orange); font-weight:600;">
+                !! MACRO EVENT: PPI -- pre-market signals may be less reliable
+            </div>
+        </div>
+        <p>Appears only on days with scheduled macro events: <strong>CPI, PPI, FOMC, NFP, GDP, PCE</strong>. These events release at specific times (usually 8:30 AM or 2:00 PM ET) and can reverse the entire pre-market trend in seconds.</p>
+
+        <div class="example-box warn">
+            <div class="box-title">When you see this</div>
+            <strong>Treat all model predictions with extra skepticism.</strong> Pre-market price action before 8:30 AM on CPI day tells you almost nothing about post-release direction. Wait for the event to drop, let the market digest it (~15 min), then refresh the dashboard.
+        </div>
+
+
+        <h2 id="prediction-cards" class="guide-section">Prediction Cards</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; text-align:center;">
+                <div style="background:var(--bg-primary); border:1px solid var(--green); border-radius:8px; padding:16px;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">FIRST 30 MIN</div>
+                    <div style="font-size:10px; color:var(--text-muted);">9:30-10:00</div>
+                    <div style="font-size:28px; font-weight:800; color:var(--green); margin:8px 0;">BULL</div>
+                    <div style="font-size:14px; color:var(--text-secondary);">72% confidence</div>
+                    <div style="height:5px; background:var(--bg-card); border-radius:3px; margin:8px 0; overflow:hidden;"><div style="height:100%; width:72%; background:var(--green); border-radius:3px;"></div></div>
+                    <span class="badge-sample badge-muted">LOW CONF</span>
+                </div>
+                <div style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:16px;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">MORNING</div>
+                    <div style="font-size:10px; color:var(--text-muted);">9:30-11:00</div>
+                    <div style="font-size:18px; font-weight:800; color:var(--text-muted); margin:16px 0;">NO EDGE</div>
+                </div>
+                <div style="background:var(--bg-primary); border:1px solid var(--green); border-radius:8px; padding:16px;">
+                    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px;">FULL DAY</div>
+                    <div style="font-size:10px; color:var(--text-muted);">9:30-16:00</div>
+                    <div style="font-size:28px; font-weight:800; color:var(--green); margin:8px 0;">BULL</div>
+                    <div style="font-size:14px; color:var(--text-secondary);">78% confidence</div>
+                    <div style="height:5px; background:var(--bg-card); border-radius:3px; margin:8px 0; overflow:hidden;"><div style="height:100%; width:78%; background:var(--green); border-radius:3px;"></div></div>
+                    <span class="badge-sample badge-green">HIGH CONF</span>
+                </div>
+            </div>
+        </div>
+
+        <p>Three cards, one per time horizon. Each predicts the direction of SPY relative to the 9:30 AM open.</p>
+
+        <div class="term" id="term-confidence">
+            <span class="term-name">Confidence %</span>
+            <span class="term-def">The averaged probability from three ML models (Random Forest, Gradient Boosting, Logistic Regression). Not a guarantee -- a 70% confidence means the ensemble gives ~70% probability to that direction.</span>
+        </div>
+        <div class="term">
+            <span class="term-name"><span class="c-muted">NO EDGE</span></span>
+            <span class="term-def">Shown when confidence is <strong>below 60%</strong>. The model doesn't have a strong enough signal. This is <em>intentional</em> -- it prevents you from anchoring on a weak, coin-flip prediction. <strong>No trade is the default.</strong></span>
+        </div>
+        <div class="term">
+            <span class="term-name"><span class="badge-sample badge-muted">LOW CONF</span></span>
+            <span class="term-def">Confidence between 60-75%. The model sees something, but it's not strong. Size down, or use only as a lean/tie-breaker alongside other analysis.</span>
+        </div>
+        <div class="term">
+            <span class="term-name"><span class="badge-sample badge-green">HIGH CONF</span></span>
+            <span class="term-def">Confidence above 75%. The three models meaningfully agree. These are the signals most worth acting on. Check the scorecard to see how high-conf signals have performed historically.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">P(bull)</span>
+            <span class="term-def">Raw probability the model assigns to a bullish outcome. Shown at the bottom of each card. P(bull) = 0.65 means 65% chance of up, 35% chance of down.</span>
+        </div>
+
+        <div class="example-box tip">
+            <div class="box-title">How to use</div>
+            The 30-minute card is most actionable for scalps and quick entries. The full-day card tells you the broader bias -- whether to hold winners or cut early. If all three agree, the signal is strongest. If they disagree (e.g., bear 30m but bull day), expect early weakness that reverses.
+        </div>
+
+
+        <h2 id="market-context" class="guide-section">Market Context</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:10px;">MARKET CONTEXT</div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; max-width:280px;"><span style="color:var(--text-secondary);">Overnight Gap</span><span class="c-green" style="font-weight:600;">+0.34%</span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; max-width:280px;"><span style="color:var(--text-secondary);">Pre-market Move</span><span class="c-red" style="font-weight:600;">-0.12%</span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; max-width:280px;"><span style="color:var(--text-secondary);">Yesterday RTH</span><span class="c-red" style="font-weight:600;">-0.13%</span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; max-width:280px;"><span style="color:var(--text-secondary);">Yesterday IBS</span><span style="font-weight:600;">0.44 (neutral)</span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0; max-width:280px;"><span style="color:var(--text-secondary);">VIX</span><span class="c-yellow" style="font-weight:600;">24.2 ELEVATED</span></div>
+        </div>
+
+        <div class="term">
+            <span class="term-name">Overnight Gap</span>
+            <span class="term-def">% change from yesterday's RTH close to today's pre-market open (4:00 AM). Measures how overnight futures/news moved the market. A big gap up/down often gets "filled" (reversed) during the session.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Pre-market Move</span>
+            <span class="term-def">% change within the pre-market window (4:00 - 9:30 AM). Shows if buyers or sellers are in control this morning. This is what the ML model primarily reads.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Yesterday RTH</span>
+            <span class="term-def">Yesterday's regular trading hours return (open to close). Context for mean-reversion: a big down day often sees a bounce, and vice versa.</span>
+        </div>
+
+        <h3 id="term-ibs">IBS (Internal Bar Strength)</h3>
+        <p>Formula: <strong>(Close - Low) / (High - Low)</strong> for yesterday's candle. Ranges from 0 to 1.</p>
+        <div class="term">
+            <span class="term-name">IBS &lt; 0.2 <span class="c-green">(oversold)</span></span>
+            <span class="term-def">Yesterday closed near its low. Historically bullish for the next day -- mean-reversion buyers tend to step in.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">IBS &gt; 0.8 <span class="c-red">(overbought)</span></span>
+            <span class="term-def">Yesterday closed near its high. Historically bearish for the next day -- sellers tend to take profits.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">IBS 0.2 - 0.8 <span class="c-muted">(neutral)</span></span>
+            <span class="term-def">No strong mean-reversion signal from yesterday's candle.</span>
+        </div>
+
+        <h3 id="term-vix">VIX (Volatility Index)</h3>
+        <p>The "fear gauge." Measures expected S&P 500 volatility over the next 30 days.</p>
+        <div class="term">
+            <span class="term-name">VIX &lt; 18 <span class="c-green">LOW</span></span>
+            <span class="term-def">Calm markets. Moves are smaller, trends are steady, premium selling works well. Breakout traps are more common.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">VIX 18-25 <span class="c-yellow">ELEVATED</span></span>
+            <span class="term-def">Choppy. Bigger intraday swings, wider stops needed. Both trend and mean-reversion can work but sizing should be reduced.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">VIX &gt; 25 <span class="c-red">HIGH</span></span>
+            <span class="term-def">Fear in the market. Large, fast moves in both directions. Size down significantly. Great for long premium (straddles). Terrible for selling premium or tight stops.</span>
+        </div>
+        <p>Shows <strong>"--"</strong> before pre-market opens or if IBKR can't provide the data.</p>
+
+
+        <h2 id="options-gex" class="guide-section">Options Walls & GEX</h2>
+        <p>This section uses real-time options chain data to identify key price levels and the current gamma regime. It tells you <em>where</em> support/resistance lives and <em>how</em> the market will behave when price moves.</p>
+
+        <h3 id="term-walls">Put Wall & Call Wall</h3>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px; text-align:center;">
+                <div style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:14px;">
+                    <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px;">PUT WALL (SUPPORT)</div>
+                    <div style="font-size:24px; font-weight:800; color:var(--green);">560</div>
+                    <div style="font-size:11px; color:var(--text-muted);">OI: 45K -- MMs buy here, floor</div>
+                </div>
+                <div style="background:var(--bg-primary); border:1px solid var(--border); border-radius:8px; padding:14px;">
+                    <div style="font-size:10px; font-weight:700; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px;">CALL WALL (RESIST)</div>
+                    <div style="font-size:24px; font-weight:800; color:var(--red);">580</div>
+                    <div style="font-size:11px; color:var(--text-muted);">OI: 38K -- MMs sell here, ceiling</div>
+                </div>
+            </div>
+        </div>
+        <p><strong>Put Wall</strong> = strike with the most put open interest below current price. Market makers who sold those puts need to <em>buy</em> stock as price approaches this level (delta hedging). This creates a natural floor / support.</p>
+        <p><strong>Call Wall</strong> = strike with the most call open interest above current price. Market makers <em>sell</em> stock here to hedge. Natural ceiling / resistance.</p>
+
+        <div class="example-box info">
+            <div class="box-title">How to use</div>
+            If SPY is at 570, put wall is 560, and call wall is 580: expect SPY to bounce between these levels. Price will struggle to break above 580 (MM selling pressure) and will find buyers near 560 (MM hedging). Use these as profit targets and stop-loss levels.
+        </div>
+
+        <h3 id="term-maxpain">Max Pain</h3>
+        <p>The strike price where the <strong>most options expire worthless</strong> -- where option holders collectively lose the most money. Market makers profit the most at this level.</p>
+        <p>Price tends to gravitate toward max pain into expiration, especially on Fridays. This is sometimes called "pinning." The effect is strongest in the last 2 hours of trading on expiration day.</p>
+
+        <h3 id="term-gexflip">GEX Flip</h3>
+        <p>The price level where net gamma exposure crosses from positive to negative. This is the <strong>regime boundary</strong> -- the market behaves fundamentally differently on each side.</p>
+
+        <h3 id="term-gamma">Gamma Exposure (GEX) & Gamma Zones</h3>
+        <p>Gamma Exposure measures how much market makers need to hedge as price moves. It determines whether the market <em>dampens</em> or <em>amplifies</em> moves.</p>
+
+        <div class="section-preview" style="border-color: var(--green); background: rgba(63,185,80,0.03);">
+            <span class="preview-label" style="color:var(--green);">Positive Gamma (+&#947;)</span>
+            <p style="margin:0; color:var(--text-secondary); font-size:13px;"><strong style="color:var(--green);">SPY is ABOVE the GEX Flip level.</strong> Dealers are LONG gamma. When price moves up, they sell. When it moves down, they buy. Their hedging <em>dampens</em> every move.</p>
+            <div style="margin-top:12px; font-size:13px;">
+                <strong>Expect:</strong> Range-bound, mean-reverting, choppy action<br>
+                <strong>Trade:</strong> Fade breakouts, buy dips, sell premium (iron condors)<br>
+                <strong>Avoid:</strong> Chasing breakouts, trend-following
+            </div>
+        </div>
+
+        <div class="section-preview" style="border-color: var(--red); background: rgba(248,81,73,0.03);">
+            <span class="preview-label" style="color:var(--red);">Negative Gamma (-&#947;)</span>
+            <p style="margin:0; color:var(--text-secondary); font-size:13px;"><strong style="color:var(--red);">SPY is BELOW the GEX Flip level.</strong> Dealers are SHORT gamma. When price moves up, they must buy more. When it moves down, they sell more. Their hedging <em>amplifies</em> every move.</p>
+            <div style="margin-top:12px; font-size:13px;">
+                <strong>Expect:</strong> Trending, volatile, outsized moves in both directions<br>
+                <strong>Trade:</strong> Ride trends, breakouts are real, buy directional<br>
+                <strong>Avoid:</strong> Mean-reversion, fading moves, tight stops, selling premium
+            </div>
+        </div>
+
+        <h3>P/C Ratio (Put/Call Ratio)</h3>
+        <div class="term">
+            <span class="term-name">P/C &lt; 0.8 <span class="c-green">(bullish skew)</span></span>
+            <span class="term-def">More call open interest than puts. Market positioning is optimistic.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">P/C 0.8-1.2 <span class="c-muted">(neutral)</span></span>
+            <span class="term-def">Balanced positioning. No strong directional skew.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">P/C &gt; 1.2 <span class="c-red">(bearish skew)</span></span>
+            <span class="term-def">More puts than calls. Market positioning is defensive / fearful. Can also be a contrarian bullish signal if extreme.</span>
+        </div>
+
+        <h3>Trading Scenarios Table</h3>
+        <p>Pre-built if/then scenarios based on the current gamma zone. Each row describes:</p>
+        <div class="term">
+            <span class="term-name">SCENARIO</span>
+            <span class="term-def">What SPY does -- the condition to watch for.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">GEX BEHAVIOR</span>
+            <span class="term-def">How dealers react -- does their hedging help or hurt your trade?</span>
+        </div>
+        <div class="term">
+            <span class="term-name">YOUR TRADE</span>
+            <span class="term-def">Suggested action. <span class="c-green">Green</span> = long, <span class="c-red">Red</span> = short, <span class="c-yellow">Yellow</span> = caution/exit, White = no trade.</span>
+        </div>
+
+        <div class="example-box warn">
+            <div class="box-title">Important</div>
+            Options data is only available when IBKR can provide chain data (pre-market and RTH). If you load the dashboard overnight or on weekends, this section will show "Options data unavailable." It will populate once the market opens for pre-market trading.
+        </div>
+
+
+        <h2 id="scorecard" class="guide-section">Scorecard</h2>
+        <div class="section-preview">
+            <span class="preview-label">What you see</span>
+            <div style="display:flex; gap:40px; margin-bottom:16px;">
+                <div>
+                    <div style="font-size:10px; font-weight:600; text-transform:uppercase; color:var(--text-secondary);">30M</div>
+                    <div style="font-size:24px; font-weight:800; color:var(--green);">67%</div>
+                    <div style="font-size:11px; color:var(--text-muted);">3/4 high-conf</div>
+                    <div style="font-size:11px; color:var(--text-muted);">6/9 all</div>
+                </div>
+                <div>
+                    <div style="font-size:10px; font-weight:600; text-transform:uppercase; color:var(--text-secondary);">MORNING</div>
+                    <div style="font-size:24px; font-weight:800; color:var(--green);">60%</div>
+                    <div style="font-size:11px; color:var(--text-muted);">2/3 high-conf</div>
+                    <div style="font-size:11px; color:var(--text-muted);">5/9 all</div>
+                </div>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:6px 8px;">2026-03-11</td>
+                    <td style="padding:6px 8px;"><span class="c-green">BULL 68%</span></td>
+                    <td style="padding:6px 8px;"><span class="c-green">BULL +0.31%</span></td>
+                    <td style="padding:6px 8px;"><span class="c-green" style="font-weight:700;">Y</span></td>
+                </tr>
+                <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:6px 8px;">2026-03-10</td>
+                    <td style="padding:6px 8px;"><span class="c-red">BEAR 72%</span></td>
+                    <td style="padding:6px 8px;"><span class="c-green">BULL +0.15%</span></td>
+                    <td style="padding:6px 8px;"><span class="c-red" style="font-weight:700;">X</span></td>
+                </tr>
+                <tr>
+                    <td style="padding:6px 8px;">2026-03-07</td>
+                    <td style="padding:6px 8px;"><span class="c-green">BULL 55%</span></td>
+                    <td style="padding:6px 8px;"><span style="color:var(--text-muted);">FLAT +0.02%</span></td>
+                    <td style="padding:6px 8px;"><span style="color:var(--text-muted);">--</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <p>Tracks predictions vs actual outcomes over the last 15 trading days. Updates automatically when you load the page after market close.</p>
+
+        <div class="term">
+            <span class="term-name"><span class="c-green" style="font-weight:700;">Y</span></span>
+            <span class="term-def">Predicted direction matched actual direction. The model was right.</span>
+        </div>
+        <div class="term">
+            <span class="term-name"><span class="c-red" style="font-weight:700;">X</span></span>
+            <span class="term-def">Predicted direction was wrong.</span>
+        </div>
+        <div class="term">
+            <span class="term-name"><span class="c-muted">--</span></span>
+            <span class="term-def">Flat day (move was less than 0.10%). Inconclusive -- not counted as right or wrong. Or actuals aren't available yet.</span>
+        </div>
+
+        <p>The summary at top shows two accuracy numbers per horizon:</p>
+        <div class="term">
+            <span class="term-name">High-conf accuracy</span>
+            <span class="term-def">Win rate on signals that had &gt;75% confidence. This is the number that matters most -- it tells you if the model's strongest calls are actually predictive.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">All accuracy</span>
+            <span class="term-def">Win rate across all predictions (including low-confidence). Expected to be lower. Useful for calibration but not for trading decisions.</span>
+        </div>
+
+        <div class="example-box tip">
+            <div class="box-title">What to watch for</div>
+            If high-conf accuracy is consistently above 60%, the model is adding value. If it drops below 50%, the model may need retraining or market conditions have shifted. Use the <strong>--train</strong> flag when starting the server to force a retrain.
+        </div>
+
+
+        <!-- ==================== DAILY SEQUENCE ==================== -->
+
+        <h2 id="daily-sequence" class="guide-section">Daily Sequence</h2>
+        <p>When and how to use the dashboard throughout the trading day.</p>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">~4:00 - 6:00 AM ET</div>
+                <div class="timeline-title">First Look (optional)</div>
+                <div class="timeline-desc">
+                    Pre-market opens at 4:00 AM. Volume is very thin. Predictions will mostly use proxy features from yesterday's data since there isn't enough pre-market activity yet. Useful to check for overnight gaps and macro event warnings, but don't trade on the predictions alone.
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot primary"></div>
+                <div class="timeline-time">~7:00 - 8:00 AM ET</div>
+                <div class="timeline-title">Primary Read</div>
+                <div class="timeline-desc">
+                    This is the sweet spot. Enough pre-market volume for the model to extract real features: VWAP deviation, volume acceleration, momentum slope, RSI. <strong>Refresh the dashboard now.</strong> This is when you form your directional bias for the day.
+                </div>
+                <ul class="timeline-checklist">
+                    <li>Check prediction cards -- do you have an edge?</li>
+                    <li>Read market context -- gap direction, IBS, VIX</li>
+                    <li>Note macro warning if present</li>
+                </ul>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot warn"></div>
+                <div class="timeline-time">~8:30 AM ET</div>
+                <div class="timeline-title">Macro Event Drop</div>
+                <div class="timeline-desc">
+                    CPI, PPI, NFP, and other major data releases drop at 8:30 AM. If you see the orange macro warning, <strong>wait for the event</strong>. The market will move sharply -- pre-market predictions made before this are unreliable. Wait for the dust to settle (~8:45 AM), then refresh.
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot primary"></div>
+                <div class="timeline-time">~9:00 - 9:25 AM ET</div>
+                <div class="timeline-title">Final Read</div>
+                <div class="timeline-desc">
+                    Refresh one last time for the fullest pre-market picture. This is your final read before the opening bell.
+                </div>
+                <ul class="timeline-checklist">
+                    <li>Re-check prediction cards with latest data</li>
+                    <li>Compare to previous predictions -- did signal strengthen or weaken?</li>
+                    <li>Review options/GEX section -- walls, gamma zone, scenarios</li>
+                    <li>Identify which trading scenario matches current conditions</li>
+                    <li>Set your plan: entry, target, stop</li>
+                </ul>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot action"></div>
+                <div class="timeline-time">9:30 AM ET</div>
+                <div class="timeline-title">Market Open -- Execute</div>
+                <div class="timeline-desc">
+                    Execute based on your read. Use the trading scenarios table to guide real-time decisions. The first 5 minutes are chaotic -- most traders wait until 9:35-9:40 for the opening range to form.
+                </div>
+                <ul class="timeline-checklist">
+                    <li>Watch for the scenario that's playing out</li>
+                    <li>Use put wall / call wall as profit targets</li>
+                    <li>Respect the gamma zone -- trend-follow in -&#947;, mean-revert in +&#947;</li>
+                    <li>If no edge was shown, stay flat or scalp only</li>
+                </ul>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">2:00 - 4:00 PM ET</div>
+                <div class="timeline-title">Into Close</div>
+                <div class="timeline-desc">
+                    Max pain gravity is strongest in the last 2 hours, especially on Fridays (0DTE expiration). Price tends to drift toward max pain. Check the scenarios table for "Into close" guidance.
+                </div>
+            </div>
+
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-time">After Close</div>
+                <div class="timeline-title">Scorecard Update</div>
+                <div class="timeline-desc">
+                    The next time you load the dashboard, the scorecard auto-updates with actual outcomes for today. Review whether the model was right or wrong, and track how high-confidence signals perform over time. This builds your trust calibration.
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ==================== READING SIGNALS ==================== -->
+
+        <h2 id="reading-signals" class="guide-section">Reading Signals Together</h2>
+        <p>The dashboard sections aren't meant to be read in isolation. Here's how they combine.</p>
+
+        <h3>Strong Bullish Setup</h3>
+        <div class="example-box tip">
+            <div class="box-title">Example</div>
+            Prediction cards: BULL across all horizons, 30M at 72%, Day at 78% HIGH CONF<br>
+            Context: Overnight gap +0.3%, PM move +0.1%, IBS was 0.15 (oversold), VIX LOW<br>
+            Options: Positive gamma, price near put wall (support), max pain above current price<br><br>
+            <strong>Read:</strong> Everything lines up. Model, context, and options all say up. Positive gamma means moves are dampened, so a steady grind higher is likely. Put wall provides a floor. Size up.
+        </div>
+
+        <h3>Conflicting Signals</h3>
+        <div class="example-box warn">
+            <div class="box-title">Example</div>
+            Prediction cards: 30M BEAR 65%, Morning NO EDGE, Day BULL 62%<br>
+            Context: Gap up +0.5%, PM move -0.2% (fading the gap), IBS 0.85 (overbought)<br>
+            Options: Negative gamma, near call wall<br><br>
+            <strong>Read:</strong> Model says weak open but recovery by EOD. Pre-market is fading a big gap. IBS is overbought. Negative gamma means the fade could accelerate. <strong>Wait.</strong> Let the 30-minute card play out, then reassess for the day trade. Don't force it.
+        </div>
+
+        <h3>No Edge Day</h3>
+        <div class="example-box info">
+            <div class="box-title">Example</div>
+            Prediction cards: NO EDGE across all three horizons<br>
+            Context: Gap 0.0%, PM move flat, IBS neutral, VIX ELEVATED<br>
+            Options: Positive gamma, near max pain<br><br>
+            <strong>Read:</strong> The model has nothing. Context is flat. Positive gamma + near max pain = expect pinning and chop. <strong>Stay flat or sell premium.</strong> This is the dashboard doing its job -- keeping you out of a coin-flip trade.
+        </div>
+
+
+        <h2 id="when-to-ignore" class="guide-section">When to Ignore the Dashboard</h2>
+
+        <div class="term">
+            <span class="term-name">Macro event days</span>
+            <span class="term-def">CPI, FOMC rate decisions, and NFP can move SPY 1-2% in minutes. Pre-market signals are meaningless before the release. Wait for the dust to settle.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Before 7 AM</span>
+            <span class="term-def">Pre-market volume is too thin for reliable feature extraction. The model is mostly guessing from yesterday's data.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Black swan events</span>
+            <span class="term-def">Geopolitical events, surprise Fed actions, market circuit breakers. The model was trained on normal distributions. Tail events break all models.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Scorecard accuracy below 50%</span>
+            <span class="term-def">If high-conf predictions have been wrong more than right over the last 15 days, the model is miscalibrated. Force retrain with <code style="background:var(--bg-card); padding:2px 6px; border-radius:3px;">python run.py --train</code> or stop using the signals until accuracy recovers.</span>
+        </div>
+        <div class="term">
+            <span class="term-name">Options data unavailable</span>
+            <span class="term-def">If the options section shows "unavailable," you're missing half the picture. The prediction cards still work, but without GEX/walls you can't identify key price levels or gamma regime. Trade smaller without this context.</span>
+        </div>
+
+        <div style="margin-top:48px; padding-top:24px; border-top:1px solid var(--border); text-align:center; color:var(--text-muted); font-size:12px;">
+            <a href="/" style="color:var(--blue); text-decoration:none;">&#8592; Back to Dashboard</a>
+        </div>
+    </div>
+
+    <script>
+    // Highlight active nav item on scroll
+    const sections = document.querySelectorAll('.guide-section');
+    const navLinks = document.querySelectorAll('.guide-nav a[href^="#"]');
+
+    function updateActiveNav() {
+        let current = '';
+        sections.forEach(section => {
+            const rect = section.getBoundingClientRect();
+            if (rect.top <= 80) {
+                current = section.id;
+            }
+        });
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+                link.classList.add('active');
+            }
+        });
+    }
+
+    window.addEventListener('scroll', updateActiveNav);
+    updateActiveNav();
+
+    // Smooth scroll for nav links
+    navLinks.forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const target = document.querySelector(link.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        });
+    });
+    </script>
+</body>
+</html>

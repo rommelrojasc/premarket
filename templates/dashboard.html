@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pre-Market Briefing</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div id="app">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Loading briefing data...</div>
+            <div style="margin-top:8px; font-size:12px;">First load trains models (~60s)</div>
+        </div>
+        <div id="content" style="display:none;">
+            <!-- Header -->
+            <div class="header">
+                <h1>Pre-Market Briefing</h1>
+                <div style="display:flex; align-items:center; gap:16px;">
+                    <span class="date" id="header-date"></span>
+                    <a href="/guide" class="refresh-btn" style="text-decoration:none; color:var(--text-secondary);">Guide</a>
+                    <button class="refresh-btn" onclick="loadData()">Refresh</button>
+                </div>
+            </div>
+
+            <!-- Computed timestamp -->
+            <div class="computed-tag" id="computed-at"></div>
+
+            <!-- Previous predictions -->
+            <div class="prev-predictions" id="prev-predictions" style="display:none;"></div>
+
+            <!-- Macro event warning -->
+            <div class="macro-warning" id="macro-warning" style="display:none;"></div>
+
+            <!-- Day signal banner -->
+            <div id="day-signal-banner"></div>
+
+            <!-- Prediction cards -->
+            <div class="prediction-cards" id="prediction-cards"></div>
+
+            <!-- Market context -->
+            <div class="context-card" id="market-context"></div>
+
+            <!-- Options & GEX Section -->
+            <div id="options-section"></div>
+
+            <!-- Scorecard Section -->
+            <div id="scorecard-section"></div>
+        </div>
+    </div>
+
+    <script>
+    let briefingData = null;
+
+    async function loadData() {
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('content').style.display = 'none';
+
+        try {
+            const resp = await fetch('/api/briefing');
+            briefingData = await resp.json();
+            if (briefingData.error) {
+                document.getElementById('loading').innerHTML =
+                    `<div style="color:var(--red)">Error: ${briefingData.error}</div>`;
+                return;
+            }
+            renderAll(briefingData);
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+        } catch(e) {
+            document.getElementById('loading').innerHTML =
+                `<div style="color:var(--red)">Failed to load: ${e.message}</div>`;
+        }
+    }
+
+    function renderAll(d) {
+        renderHeader(d);
+        renderPrevPredictions(d);
+        renderMacroWarning(d);
+        renderDaySignal(d);
+        renderPredictionCards(d);
+        renderMarketContext(d);
+        renderOptions(d);
+        renderScorecard(d);
+    }
+
+    function renderHeader(d) {
+        document.getElementById('header-date').textContent = `${d.day_name} ${d.date}`;
+        document.getElementById('computed-at').textContent = `Computed: ${d.computed_at}`;
+    }
+
+    function renderPrevPredictions(d) {
+        const el = document.getElementById('prev-predictions');
+        const prev = d.previous_predictions;
+        if (!prev || !prev.predictions) { el.style.display = 'none'; return; }
+
+        const preds = prev.predictions;
+        let parts = [`<div class="label">PREVIOUS PREDICTIONS -- ${d.date}</div><div>`];
+
+        const horizonLabels = {'30m': '30M', 'morning': 'MORN', 'day': 'DAY'};
+        for (const [key, label] of Object.entries(horizonLabels)) {
+            const p = preds[key];
+            if (!p) continue;
+            const cls = p.direction === 'BULL' ? 'pred-bull' : 'pred-bear';
+            parts.push(`${label} <span class="${cls}">${p.direction} ${p.confidence}%</span>`);
+
+            // Check if we have actuals
+            const sc = d.scorecard;
+            if (sc && sc.rows && sc.rows.length > 0) {
+                const todayRow = sc.rows.find(r => r.date === d.date);
+                if (todayRow && todayRow[key] && todayRow[key].actual_return !== null) {
+                    const act = todayRow[key];
+                    const actDir = act.actual_direction || 'FLAT';
+                    const actRet = act.actual_return || 0;
+                    const actCls = actRet > 0 ? 'actual-positive' : actRet < 0 ? 'actual-negative' : 'actual-flat';
+                    parts.push(` -> <span class="${actCls}">${actDir} ${actRet > 0 ? '+' : ''}${actRet}%</span>`);
+                }
+            }
+            parts.push('&nbsp;&nbsp;&nbsp;');
+        }
+        parts.push('</div>');
+        el.innerHTML = parts.join('');
+        el.style.display = 'block';
+    }
+
+    function renderMacroWarning(d) {
+        const el = document.getElementById('macro-warning');
+        if (d.macro_event) {
+            el.textContent = `!! MACRO EVENT: ${d.macro_event} -- pre-market signals may be less reliable`;
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+
+    function renderDaySignal(d) {
+        const el = document.getElementById('day-signal-banner');
+        const dayPred = d.predictions && d.predictions.day;
+
+        if (!dayPred || !dayPred.show_signal) {
+            el.innerHTML = '';
+            return;
+        }
+
+        const dir = dayPred.direction;
+        const conf = dayPred.confidence;
+        const cls = dir === 'BULL' ? '' : 'bear';
+        const icon = dir === 'BULL' ? '&#9650;' : '&#9660;';
+        const desc = dir === 'BULL'
+            ? 'Long bias. Day trend favors holding longs, wider targets.'
+            : 'Short bias. Day trend favors holding shorts, wider targets.';
+
+        el.innerHTML = `
+            <div class="day-signal-banner ${cls}">
+                <h3>${icon} Day Signal: ${dir} (${conf}%)</h3>
+                <p>${desc}</p>
+            </div>`;
+    }
+
+    function renderPredictionCards(d) {
+        const el = document.getElementById('prediction-cards');
+        const horizons = [
+            {key: '30m', label: 'FIRST 30 MIN', sub: '9:30-10:00'},
+            {key: 'morning', label: 'MORNING', sub: '9:30-11:00'},
+            {key: 'day', label: 'FULL DAY', sub: '9:30-16:00'},
+        ];
+
+        let html = '';
+        for (const h of horizons) {
+            const pred = d.predictions && d.predictions[h.key];
+            if (!pred || !pred.show_signal) {
+                html += `
+                    <div class="pred-card">
+                        <div class="horizon-label">${h.label}</div>
+                        <div class="horizon-sub">${h.sub}</div>
+                        <div class="direction no-edge">NO EDGE</div>
+                    </div>`;
+                continue;
+            }
+
+            const dir = pred.direction;
+            const conf = pred.confidence;
+            const bullProb = pred.bull_prob;
+            const isHigh = pred.high_confidence;
+            const borderCls = dir === 'BULL' ? 'active-bull' : 'active-bear';
+            const dirCls = dir === 'BULL' ? 'bull' : 'bear';
+            const barWidth = conf;
+
+            html += `
+                <div class="pred-card ${borderCls}">
+                    <div class="horizon-label">${h.label}</div>
+                    <div class="horizon-sub">${h.sub}</div>
+                    <div class="direction ${dirCls}">${dir}</div>
+                    <div class="confidence">${conf}% confidence</div>
+                    <div class="conf-bar-container">
+                        <div class="conf-bar ${dirCls}" style="width:${barWidth}%"></div>
+                    </div>
+                    <div style="margin-top:8px;">
+                        <span class="conf-badge ${isHigh ? 'high' : 'low'}">${isHigh ? 'HIGH CONF' : 'LOW CONF'}</span>
+                    </div>
+                    <div class="prob-label">P(bull) = ${bullProb}</div>
+                </div>`;
+        }
+        el.innerHTML = html;
+    }
+
+    function renderMarketContext(d) {
+        const el = document.getElementById('market-context');
+        const ctx = d.context || {};
+
+        function valClass(v) {
+            if (v === null || v === undefined) return '';
+            return v > 0 ? 'positive' : v < 0 ? 'negative' : '';
+        }
+        function fmt(v) {
+            if (v === null || v === undefined) return '--';
+            return (v > 0 ? '+' : '') + v + '%';
+        }
+
+        let ibsText = ctx.yesterday_ibs !== null ? ctx.yesterday_ibs.toString() : '--';
+        if (ctx.ibs_label) ibsText += ` (${ctx.ibs_label})`;
+
+        let vixText = ctx.vix !== null ? ctx.vix.toString() : '--';
+        if (ctx.vix_label) vixText += ` ${ctx.vix_label}`;
+        const vixCls = ctx.vix_label === 'HIGH' ? 'warn' : ctx.vix_label === 'ELEVATED' ? 'warn' : '';
+
+        el.innerHTML = `
+            <h4>MARKET CONTEXT</h4>
+            <div class="context-row">
+                <span class="label">Overnight Gap</span>
+                <span class="value ${valClass(ctx.overnight_gap)}">${fmt(ctx.overnight_gap)}</span>
+            </div>
+            <div class="context-row">
+                <span class="label">Pre-market Move</span>
+                <span class="value ${valClass(ctx.pm_move)}">${fmt(ctx.pm_move)}</span>
+            </div>
+            <div class="context-row">
+                <span class="label">Yesterday RTH</span>
+                <span class="value ${valClass(ctx.yesterday_rth)}">${fmt(ctx.yesterday_rth)}</span>
+            </div>
+            <div class="context-row">
+                <span class="label">Yesterday IBS</span>
+                <span class="value">${ibsText}</span>
+            </div>
+            <div class="context-row">
+                <span class="label">VIX</span>
+                <span class="value ${vixCls}">${vixText}</span>
+            </div>`;
+    }
+
+    function renderOptions(d) {
+        const el = document.getElementById('options-section');
+        const opt = d.options;
+        if (!opt) {
+            el.innerHTML = '<div style="color:var(--text-muted); margin-bottom:32px;">Options data unavailable</div>';
+            return;
+        }
+
+        const gex = opt.gex || {};
+        const walls = opt.walls || {};
+        const pw = walls.put_wall;
+        const cw = walls.call_wall;
+        const isNeg = gex.is_negative_gamma;
+        const price = opt.current_price;
+        const change = opt.price_change;
+        const changePct = opt.price_change_pct;
+        const changeCls = change >= 0 ? 'actual-positive' : 'actual-negative';
+
+        let html = `
+            <div style="margin-top:24px;">
+                <div class="section-title">Options Walls & GEX</div>
+                <div class="section-subtitle">${(gex.total_contracts || 0).toLocaleString()} contracts | ${(opt.expirations || []).join(', ')}</div>
+
+                <div class="options-header">
+                    <span class="price">SPY ${price}</span>
+                    <span class="change ${changeCls}">${change >= 0 ? '+' : ''}${change} (${change >= 0 ? '+' : ''}${changePct}%)</span>
+                    <span class="prev-close">Prev close: ${opt.prev_close || '--'}</span>
+                </div>
+
+                <div class="options-cards">
+                    <div class="opt-card">
+                        <div class="opt-label">PUT WALL (SUPPORT)</div>
+                        <div class="opt-value green">${pw ? Math.round(pw.strike) : '--'}</div>
+                        <div class="opt-desc">${pw ? `OI: ${(pw.oi/1000).toFixed(0)}K -- MMs buy here, floor` : ''}</div>
+                    </div>
+                    <div class="opt-card">
+                        <div class="opt-label">CALL WALL (RESIST)</div>
+                        <div class="opt-value red">${cw ? Math.round(cw.strike) : '--'}</div>
+                        <div class="opt-desc">${cw ? `OI: ${(cw.oi/1000).toFixed(0)}K -- MMs sell here, ceiling` : ''}</div>
+                    </div>
+                    <div class="opt-card">
+                        <div class="opt-label">MAX PAIN</div>
+                        <div class="opt-value yellow">${opt.max_pain ? Math.round(opt.max_pain) : '--'}</div>
+                        <div class="opt-desc">Expiry magnet -- most options expire worthless here</div>
+                    </div>
+                    <div class="opt-card">
+                        <div class="opt-label">GEX FLIP</div>
+                        <div class="opt-value purple">${gex.gex_flip || '--'}</div>
+                        <div class="opt-desc">SPY ${price < (gex.gex_flip || 0) ? 'below' : 'above'} = ${isNeg ? '-γ zone' : '+γ zone'}</div>
+                    </div>
+                    <div class="opt-card">
+                        <div class="opt-label">P/C RATIO</div>
+                        <div class="opt-value ${gex.pc_ratio > 1 ? 'red' : 'green'}">${gex.pc_ratio || '--'}</div>
+                        <div class="opt-desc">${gex.pc_ratio > 1.2 ? '(bearish skew)' : gex.pc_ratio > 0.8 ? '(neutral)' : '(bullish skew)'}</div>
+                    </div>
+                </div>
+            </div>`;
+
+        // GEX header
+        html += `<div class="gex-header">Net GEX: $${gex.net_gex_millions || 0}M (${isNeg ? 'negative' : 'positive'}) -- Dealers ${isNeg ? 'SHORT' : 'LONG'} gamma -- moves ${isNeg ? 'amplified, trend/breakout favored' : 'dampened, mean-reversion favored'}</div>`;
+
+        // Gamma zone box
+        const zoneClass = isNeg ? '' : 'positive';
+        if (isNeg) {
+            html += `
+                <div class="gamma-zone-box ${zoneClass}">
+                    <h3>ZONE: <span class="zone-label">-γ (negative gamma)</span></h3>
+                    <p><strong>What this means:</strong> Dealers are SHORT gamma. When price moves, their hedging <em>amplifies</em> the move instead of dampening it. Moves are faster and more violent than usual in both directions.</p>
+                    <p><strong>How to trade it:</strong> Trend-following works. If SPY picks a direction, ride it -- don't fade. Breakouts are real, not traps. Size down because moves overshoot. Avoid mean-reversion plays.</p>
+                </div>`;
+        } else {
+            html += `
+                <div class="gamma-zone-box ${zoneClass}">
+                    <h3>ZONE: <span class="zone-label">+γ (positive gamma)</span></h3>
+                    <p><strong>What this means:</strong> Dealers are LONG gamma. When price moves, their hedging <em>dampens</em> the move. Moves are slower, choppier, and tend to mean-revert.</p>
+                    <p><strong>How to trade it:</strong> Mean-reversion works. Fade breakouts and buy dips. Range-bound strategies (iron condors, selling premium). Size up because moves are contained.</p>
+                </div>`;
+        }
+
+        // Price levels
+        const levels = [];
+        if (cw) levels.push({price: cw.strike, name: 'Call Wall', desc: 'MM sells aggressively here', color: 'red', gamma: isNeg ? '-γ amplified moves' : '+γ dampened moves'});
+        if (opt.max_pain) levels.push({price: opt.max_pain, name: 'Max Pain', desc: 'price magnet near expiry', color: 'yellow', gamma: isNeg ? '-γ amplified moves' : '+γ dampened moves'});
+        if (gex.gex_flip) levels.push({price: gex.gex_flip, name: 'GEX Flip', desc: 'gamma regime boundary', color: 'green', gamma: isNeg ? '-γ deep -- moves accelerate' : '+γ -- moves dampened'});
+        levels.push({price: price, name: 'SPY NOW', desc: `current price`, color: 'white', gamma: isNeg ? '-γ deep -- moves accelerate' : '+γ -- moves dampened'});
+        if (pw) levels.push({price: pw.strike, name: 'Put Wall', desc: 'MM buys aggressively here', color: 'green', gamma: isNeg ? '-γ amplified moves' : '+γ dampened moves'});
+
+        levels.sort((a, b) => b.price - a.price);
+
+        html += `<div class="price-levels"><h4>Price levels from the options chart</h4>`;
+        for (const lev of levels) {
+            html += `
+                <div class="price-level">
+                    <span class="level-dot ${lev.color}"></span>
+                    <span class="level-price ${lev.color}">${lev.price.toFixed(1)}</span>
+                    <span class="level-name ${lev.color}">${lev.name}</span>
+                    <span class="level-desc">${lev.desc}</span>
+                </div>
+                <div class="gamma-note">${lev.gamma}</div>`;
+        }
+        html += `</div>`;
+
+        // Trading scenarios
+        const scenarios = opt.scenarios || [];
+        if (scenarios.length > 0) {
+            html += `
+                <div class="scenarios-section">
+                    <h4>Trading scenarios</h4>
+                    <table class="scenarios-table">
+                        <thead>
+                            <tr>
+                                <th>SCENARIO</th>
+                                <th>GEX BEHAVIOR</th>
+                                <th>YOUR TRADE</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            for (const s of scenarios) {
+                const tradeCls = `trade-${s.trade_color || 'white'}`;
+                html += `
+                    <tr>
+                        <td>${s.scenario}</td>
+                        <td>${s.gex_behavior}</td>
+                        <td>
+                            <span class="${tradeCls}">${s.trade}</span>
+                            ${s.target ? `<span class="trade-target">${s.target}</span>` : ''}
+                        </td>
+                    </tr>`;
+            }
+            html += `</tbody></table>
+                <div class="scenarios-note">Strikes chosen for liquidity (highest OI near target). Always check bid/ask spread before entering.</div>
+                </div>`;
+        }
+
+        el.innerHTML = html;
+    }
+
+    function renderScorecard(d) {
+        const el = document.getElementById('scorecard-section');
+        const sc = d.scorecard;
+        if (!sc || !sc.rows || sc.rows.length === 0) {
+            el.innerHTML = '<div class="scorecard-section"><h3>Recent Predictions vs Actual</h3><p style="color:var(--text-muted);">No prediction history yet. Predictions will appear here after the first trading day.</p></div>';
+            return;
+        }
+
+        const horizons = ['30m', 'morning', 'day'];
+        const horizonLabels = {'30m': '30M', 'morning': 'MORNING', 'day': 'DAY'};
+
+        // Summary stats
+        let summaryHtml = '<div class="summary-stats">';
+        for (const h of horizons) {
+            const s = sc.summary[h] || {};
+            summaryHtml += `
+                <div class="summary-stat">
+                    <div class="stat-label">${horizonLabels[h]}</div>
+                    <div class="stat-value">${s.accuracy || 0}%</div>
+                    <div class="stat-detail">${s.high_conf_record || ''}</div>
+                    <div class="stat-detail">${s.record || ''}</div>
+                </div>`;
+        }
+        summaryHtml += '</div>';
+
+        // Table
+        let tableHtml = `
+            <table class="scorecard-table">
+                <thead>
+                    <tr>
+                        <th>DATE</th>
+                        <th>30M PRED</th>
+                        <th>ACTUAL</th>
+                        <th></th>
+                        <th>MORN PRED</th>
+                        <th>ACTUAL</th>
+                        <th></th>
+                        <th>DAY PRED</th>
+                        <th>ACTUAL</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+        for (const row of sc.rows) {
+            tableHtml += `<tr><td>${row.date}</td>`;
+            for (const h of horizons) {
+                const hd = row[h] || {};
+                const predDir = hd.pred_direction || '--';
+                const predConf = hd.pred_confidence || 0;
+                const actDir = hd.actual_direction || '--';
+                const actRet = hd.actual_return;
+                const match = hd.match || '--';
+
+                const predCls = predDir === 'BULL' ? 'pred-bull' : predDir === 'BEAR' ? 'pred-bear' : '';
+                const actCls = actRet > 0 ? 'actual-positive' : actRet < 0 ? 'actual-negative' : 'actual-flat';
+                const matchCls = match === 'Y' ? 'match-y' : match === 'X' ? 'match-x' : 'match-flat';
+
+                const actText = actRet !== null && actRet !== undefined
+                    ? `${actDir} ${actRet > 0 ? '+' : ''}${actRet}%`
+                    : '--';
+
+                tableHtml += `
+                    <td><span class="${predCls}">${predDir} ${predConf}%</span></td>
+                    <td><span class="${actCls}">${actText}</span></td>
+                    <td><span class="${matchCls}">${match}</span></td>`;
+            }
+            tableHtml += '</tr>';
+        }
+        tableHtml += '</tbody></table>';
+
+        el.innerHTML = `
+            <div class="scorecard-section">
+                <div class="scorecard-header">
+                    <h3>Recent Predictions vs Actual</h3>
+                    <span class="scorecard-meta">${sc.n_days} days | trained ${sc.trained_date}</span>
+                </div>
+                ${summaryHtml}
+                ${tableHtml}
+            </div>`;
+    }
+
+    // Load on page load
+    loadData();
+    </script>
+</body>
+</html>
